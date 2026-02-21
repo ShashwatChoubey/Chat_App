@@ -29,6 +29,9 @@ export default function SignUpPage() {
                     </div>
 
                     <SignUp
+                        forceRedirectUrl="/chat"
+                        signInUrl="/"
+
                         appearance={{
                             elements: {
                                 formButtonPrimary:
@@ -60,7 +63,7 @@ export default function SignUpPage() {
                 <div className="mt-4 text-center">
                     <p className="text-slate-500 text-sm">
                         Already have an account?{" "}
-                        <a href="/sign-in" className="text-blue-500 hover:text-blue-600 font-medium">
+                        <a href="/" className="text-blue-500 hover:text-blue-600 font-medium">
                             Sign in instead
                         </a>
                     </p>

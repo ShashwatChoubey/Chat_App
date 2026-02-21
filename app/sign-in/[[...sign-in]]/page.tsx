@@ -29,6 +29,10 @@ export default function SignInPage() {
                     </div>
 
                     <SignIn
+                        routing="hash"
+                        forceRedirectUrl="/chat"
+                        signUpUrl="/sign-up"
+
                         appearance={{
                             elements: {
                                 formButtonPrimary:
