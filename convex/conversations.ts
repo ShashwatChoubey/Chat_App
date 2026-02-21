@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+
 export const createConversation = mutation({
     args: {
         participantId: v.id("users"),
@@ -47,7 +48,7 @@ export const getConversations = query({
     args: {},
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
-        if (!identity) throw new Error("Unauthorized");
+        if (!identity) return [];
 
         const currentUser = await ctx.db
             .query("users")
@@ -58,25 +59,35 @@ export const getConversations = query({
 
         const conversations = await ctx.db.query("conversations").collect();
 
-        // Filter conversations where current user is a participant
         const userConversations = conversations.filter((conv) =>
             conv.participants.includes(currentUser._id)
         );
 
-        // Get the other participant's details for each conversation
-        const conversationsWithUsers = await Promise.all(
+        const conversationsWithDetails = await Promise.all(
             userConversations.map(async (conv) => {
                 const otherUserId = conv.participants.find(
                     (id) => id !== currentUser._id
                 );
                 const otherUser = await ctx.db.get(otherUserId!);
+
+                // Get last message
+                const messages = await ctx.db
+                    .query("messages")
+                    .withIndex("by_conversationId", (q) =>
+                        q.eq("conversationId", conv._id)
+                    )
+                    .collect();
+
+                const lastMessage = messages[messages.length - 1] ?? null;
+
                 return {
                     ...conv,
                     otherUser,
+                    lastMessage,
                 };
             })
         );
 
-        return conversationsWithUsers;
+        return conversationsWithDetails;
     },
 });
