@@ -30,5 +30,12 @@ export default defineSchema({
         lastTyped: v.number(),
     }).index("by_conversationId", ["conversationId"]),
 
+    reads: defineTable({
+        conversationId: v.id("conversations"),
+        userId: v.id("users"),
+        lastReadTime: v.number(),
+    }).index("by_conversationId", ["conversationId"])
+        .index("by_userId_conversationId", ["userId", "conversationId"]),
+
 
 });

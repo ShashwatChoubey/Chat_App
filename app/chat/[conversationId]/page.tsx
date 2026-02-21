@@ -10,18 +10,20 @@ import { formatMessageTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useOnlineStatus } from "@/hooks/Status";
 
+
 export default function ConversationPage() {
     const { conversationId } = useParams();
     const [text, setText] = useState("");
-    const [, forceUpdate] = useState(0);
     useOnlineStatus();
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const clearTyping = useMutation(api.typing.clearTyping);
 
-    // typingTimeoutRef.current = setTimeout(() => {
-    //     clearTyping({ conversationId: conversationId as Id<"conversations"> });
-    // }, 3000);
+    const markAsRead = useMutation(api.reads.markAsRead);
+
+    useEffect(() => {
+        markAsRead({ conversationId: conversationId as Id<"conversations"> });
+    }, [conversationId]);
 
     const messages = useQuery(api.messages.getMessages, {
         conversationId: conversationId as Id<"conversations">,
