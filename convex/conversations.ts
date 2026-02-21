@@ -91,3 +91,28 @@ export const getConversations = query({
         return conversationsWithDetails;
     },
 });
+
+export const getConversationById = query({
+    args: { conversationId: v.id("conversations") },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) return null;
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+            .unique();
+
+        if (!currentUser) return null;
+
+        const conversation = await ctx.db.get(args.conversationId);
+        if (!conversation) return null;
+
+        const otherUserId = conversation.participants.find(
+            (id) => id !== currentUser._id
+        );
+        const otherUser = await ctx.db.get(otherUserId!);
+
+        return { ...conversation, otherUser };
+    },
+});

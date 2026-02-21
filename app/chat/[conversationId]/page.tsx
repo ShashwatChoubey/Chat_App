@@ -8,10 +8,13 @@ import { Id } from "@/convex/_generated/dataModel";
 import Sidebar from "@/components/Sidebar";
 import { formatMessageTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { useOnlineStatus } from "@/hooks/Status";
+
 
 export default function ConversationPage() {
     const { conversationId } = useParams();
     const [text, setText] = useState("");
+    useOnlineStatus()
 
     const messages = useQuery(api.messages.getMessages, {
         conversationId: conversationId as Id<"conversations">,
@@ -30,6 +33,9 @@ export default function ConversationPage() {
     };
 
     const router = useRouter();
+    const conversation = useQuery(api.conversations.getConversationById, {
+        conversationId: conversationId as Id<"conversations">,
+    });
 
 
     return (
@@ -43,6 +49,23 @@ export default function ConversationPage() {
                             Send a message to begin the conversation
                         </div>
                     )}
+                    <div className="flex items-center gap-3 p-4 border-b">
+                        <button onClick={() => router.push("/chat")}>← Back</button>
+                        <div className="relative">
+                            <img src={conversation?.otherUser?.imageUrl} className="w-8 h-8 rounded-full" />
+                            {conversation?.otherUser?.isOnline && (
+                                <span className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border-2 border-white" />
+                            )}
+                        </div>
+                        <div>
+                            <p className="font-medium">{conversation?.otherUser?.name}</p>
+                            <p className="text-xs text-gray-400">
+                                {conversation?.otherUser?.isOnline
+                                    ? "Online"
+                                    : `Last seen ${formatMessageTime(conversation?.otherUser?.lastSeen ?? Date.now())}`}
+                            </p>
+                        </div>
+                    </div>
 
                     <button onClick={() => router.push("/chat")}>← Back</button>
                     {messages?.map((message) => {

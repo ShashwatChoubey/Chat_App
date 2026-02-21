@@ -7,6 +7,7 @@ import { useUser, UserButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import Sidebar from "@/components/Sidebar";
+import { useOnlineStatus } from "@/hooks/Status";
 
 type User = {
     _id: Id<"users">;
@@ -16,6 +17,7 @@ type User = {
     username: string;
     clerkId: string;
 };
+
 
 export default function Home() {
     const { user, isLoaded } = useUser();
@@ -28,6 +30,7 @@ export default function Home() {
     const createConversation = useMutation(api.conversations.createConversation);
     const sendMessage = useMutation(api.messages.sendMessage);
     const router = useRouter();
+    useOnlineStatus()
 
     useEffect(() => {
         if (isLoaded && user) {
@@ -141,11 +144,17 @@ export default function Home() {
                                         onClick={() => handleClick(u as User)}
                                         className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
                                     >
-                                        <img
-                                            src={u.imageUrl}
-                                            alt={u.name}
-                                            className="w-10 h-10 rounded-full"
-                                        />
+
+                                        <div className="relative">
+                                            <img
+                                                src={u?.imageUrl}
+                                                alt={u?.name}
+                                                className="w-10 h-10 rounded-full"
+                                            />
+                                            {u?.isOnline && (
+                                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                                            )}
+                                        </div>
                                         <span>{u.name}</span>
                                     </div>
                                 ))}
