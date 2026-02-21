@@ -24,7 +24,7 @@ export const createUser = mutation({
         const userId = await ctx.db.insert("users", {
             clerkId: identity.subject,
             email: identity.email ?? "",
-            name: identity.name ?? "",
+            name: identity.nickname ?? identity.name ?? "",
             imageUrl: identity.pictureUrl ?? "",
             username: identity.nickname ?? identity.email ?? "",
         });
@@ -39,7 +39,7 @@ export const getUsers = query({
         const identity = await ctx.auth.getUserIdentity();
 
         if (!identity) {
-            throw new Error("Unauthorized");
+            return [];
         }
 
         const users = await ctx.db.query("users").collect();
@@ -54,7 +54,7 @@ export const getMe = query({
         const identity = await ctx.auth.getUserIdentity();
 
         if (!identity) {
-            throw new Error("Unauthorized");
+            return null;
         }
 
         const user = await ctx.db

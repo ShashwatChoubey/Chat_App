@@ -7,7 +7,7 @@ export default defineSchema({
         email: v.string(),
         name: v.string(),
         imageUrl: v.string(),
-        username: v.optional(v.string()),
+        username: v.string(),
     }).index("by_clerkId", ["clerkId"]),
 
     conversations: defineTable({
