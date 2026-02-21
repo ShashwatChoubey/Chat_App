@@ -14,6 +14,9 @@ export default function Sidebar() {
             <div className="p-4 border-b">
                 <h2 className="font-bold text-lg">Messages</h2>
             </div>
+            {conversations?.length === 0 && (
+                <p className="text-center text-gray-400 mt-4 p-4">No recent chats</p>
+            )}
 
             {conversations?.map((conv) => (
                 <div
@@ -30,7 +33,9 @@ export default function Sidebar() {
                         <span className="font-medium">{conv.otherUser?.name}</span>
                         <span className="text-sm text-gray-500 truncate">
                             {conv.lastMessage?.content ?? "No messages yet"}
-                            <p className="text-xs text-gray-400 mt-1">{formatMessageTime(conv.lastMessage._creationTime)}</p>
+                            {conv.lastMessage && (
+                                <p className="text-xs text-gray-400 mt-1">{formatMessageTime(conv.lastMessage._creationTime)}</p>
+                            )}
                         </span>
                     </div>
                 </div>

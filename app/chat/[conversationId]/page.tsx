@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import Sidebar from "@/components/Sidebar";
 import { formatMessageTime } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export default function ConversationPage() {
     const { conversationId } = useParams();
@@ -28,12 +29,22 @@ export default function ConversationPage() {
         setText("");
     };
 
+    const router = useRouter();
+
+
     return (
         <div className="flex h-screen">
             <Sidebar />
 
             <div className="flex flex-col flex-1">
                 <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+                    {messages?.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center text-gray-400">
+                            Send a message to begin the conversation
+                        </div>
+                    )}
+
+                    <button onClick={() => router.push("/chat")}>← Back</button>
                     {messages?.map((message) => {
                         const isMe = message.senderId === currentUser?._id;
                         return (
