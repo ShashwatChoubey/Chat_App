@@ -9,6 +9,7 @@ import Sidebar from "@/components/Sidebar";
 import { formatMessageTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useOnlineStatus } from "@/hooks/Status";
+import MessageItem from "@/components/MessageItem";
 
 export default function ConversationPage() {
     const { conversationId } = useParams();
@@ -124,32 +125,16 @@ export default function ConversationPage() {
                     {messages?.map((message) => {
                         const isMe = message.senderId === currentUser?._id;
                         return (
-                            <div
+                            <MessageItem
                                 key={message._id}
-                                className={`p-2 rounded-lg max-w-xs ${isMe
-                                    ? "ml-auto bg-blue-100 text-right"
-                                    : "mr-auto bg-gray-100 text-left"
-                                    }`}
-                            >
-                                {message.isDeleteMessage ? (
-                                    <p className="italic text-gray-400 text-sm">This message was deleted</p>
-                                ) : (
-                                    <>
-                                        <p>{message.content}</p>
-                                        {isMe && !message.isDeleteMessage && Date.now() - message._creationTime < 5 * 60 * 1000 && (
-                                            <button
-                                                onClick={() => deleteMessage({ messageId: message._id })}
-                                                className="text-xs text-red-400 mt-1"
-                                            >
-                                                Delete
-                                            </button>
-                                        )}
-                                    </>
-                                )}
-                                <p className="text-xs text-gray-400 mt-1">{formatMessageTime(message._creationTime)}</p>
-                            </div>
+                                message={message}
+                                isMe={isMe}
+                                currentUserId={currentUser?._id as Id<"users">}
+                            />
                         );
                     })}
+
+
 
                     <div ref={messagesEndRef} />
                 </div>

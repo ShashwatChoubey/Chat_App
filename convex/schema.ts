@@ -38,5 +38,11 @@ export default defineSchema({
     }).index("by_conversationId", ["conversationId"])
         .index("by_userId_conversationId", ["userId", "conversationId"]),
 
+    reactions: defineTable({
+        messageId: v.id("messages"),
+        userId: v.id("users"),
+        emoji: v.string(),
+    }).index("by_messageId", ["messageId"]),
+
 
 });
