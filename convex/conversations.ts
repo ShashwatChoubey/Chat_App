@@ -83,7 +83,11 @@ export const getConversations = query({
                 return {
                     ...conv,
                     otherUser,
-                    lastMessage,
+                    lastMessage: lastMessage ? {
+                        content: lastMessage.content,
+                        _creationTime: lastMessage._creationTime,
+                        senderId: lastMessage.senderId,
+                    } : null,
                 };
             })
         );

@@ -10,15 +10,18 @@ import { formatMessageTime } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useOnlineStatus } from "@/hooks/Status";
 
-
 export default function ConversationPage() {
     const { conversationId } = useParams();
     const [text, setText] = useState("");
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const [hasNewMessages, setHasNewMessages] = useState(false);
+    const prevMessageCountRef = useRef(0);
     useOnlineStatus();
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     const clearTyping = useMutation(api.typing.clearTyping);
-
     const markAsRead = useMutation(api.reads.markAsRead);
 
     useEffect(() => {
@@ -36,21 +39,53 @@ export default function ConversationPage() {
 
     const currentUser = useQuery(api.users.getMe);
     const sendMessage = useMutation(api.messages.sendMessage);
+    const router = useRouter();
+    const conversation = useQuery(api.conversations.getConversationById, {
+        conversationId: conversationId as Id<"conversations">,
+    });
+
+    useEffect(() => {
+        if (!messages) return;
+
+        const currentCount = messages.length;
+        const prevCount = prevMessageCountRef.current;
+
+        if (currentCount > prevCount) {
+            markAsRead({ conversationId: conversationId as Id<"conversations"> });
+            if (isAtBottom) {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                setHasNewMessages(false);
+            } else {
+                setHasNewMessages(true);
+            }
+        }
+
+        prevMessageCountRef.current = currentCount;
+    }, [messages]);
+
+
+    const handleScroll = () => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        setIsAtBottom(isNearBottom);
+        if (isNearBottom) setHasNewMessages(false);
+    };
 
     const handleSend = async () => {
         if (!text.trim()) return;
         await sendMessage({
             conversationId: conversationId as Id<"conversations">,
             content: text,
-        })
-        clearTyping({ conversationId: conversationId as Id<"conversations"> })
+        });
+        clearTyping({ conversationId: conversationId as Id<"conversations"> });
         setText("");
+        setIsAtBottom(true);
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        setHasNewMessages(false);
     };
 
-    const router = useRouter();
-    const conversation = useQuery(api.conversations.getConversationById, {
-        conversationId: conversationId as Id<"conversations">,
-    });
+    const deleteMessage = useMutation(api.messages.deleteMessage);
 
     return (
         <div className="flex h-screen">
@@ -75,7 +110,11 @@ export default function ConversationPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+                <div
+                    ref={messagesContainerRef}
+                    onScroll={handleScroll}
+                    className="flex-1 overflow-y-auto p-4 flex flex-col gap-2"
+                >
                     {messages?.length === 0 && (
                         <div className="flex-1 flex items-center justify-center text-gray-400">
                             Send a message to begin the conversation
@@ -92,12 +131,41 @@ export default function ConversationPage() {
                                     : "mr-auto bg-gray-100 text-left"
                                     }`}
                             >
-                                {message.content}
+                                {message.isDeleteMessage ? (
+                                    <p className="italic text-gray-400 text-sm">This message was deleted</p>
+                                ) : (
+                                    <>
+                                        <p>{message.content}</p>
+                                        {isMe && !message.isDeleteMessage && Date.now() - message._creationTime < 5 * 60 * 1000 && (
+                                            <button
+                                                onClick={() => deleteMessage({ messageId: message._id })}
+                                                className="text-xs text-red-400 mt-1"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+                                    </>
+                                )}
                                 <p className="text-xs text-gray-400 mt-1">{formatMessageTime(message._creationTime)}</p>
                             </div>
                         );
                     })}
+
+                    <div ref={messagesEndRef} />
                 </div>
+
+                {hasNewMessages && !isAtBottom && (
+                    <button
+                        onClick={() => {
+                            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                            setIsAtBottom(true);
+                            setHasNewMessages(false);
+                        }}
+                        className="mx-auto mb-2 px-4 py-1 bg-blue-500 text-white text-sm rounded-full"
+                    >
+                        ↓ New messages
+                    </button>
+                )}
 
                 {typingUser && (
                     <p className="text-xs text-gray-400 px-4 pb-1">{typingUser} is typing...</p>
@@ -110,16 +178,10 @@ export default function ConversationPage() {
                         onChange={(e) => {
                             const value = e.target.value;
                             setText(value);
-
-
                             setTyping({ conversationId: conversationId as Id<"conversations"> });
-
-
                             if (typingTimeoutRef.current) {
                                 clearTimeout(typingTimeoutRef.current);
                             }
-
-
                             typingTimeoutRef.current = setTimeout(() => {
                                 clearTyping({ conversationId: conversationId as Id<"conversations"> });
                             }, 2500);
