@@ -44,6 +44,7 @@ export default function ConversationPage() {
     const conversation = useQuery(api.conversations.getConversationById, {
         conversationId: conversationId as Id<"conversations">,
     });
+    const [sendError, setSendError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!messages) return;
@@ -75,18 +76,23 @@ export default function ConversationPage() {
 
     const handleSend = async () => {
         if (!text.trim()) return;
-        await sendMessage({
-            conversationId: conversationId as Id<"conversations">,
-            content: text,
-        });
-        clearTyping({ conversationId: conversationId as Id<"conversations"> });
-        setText("");
-        setIsAtBottom(true);
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        setHasNewMessages(false);
+        try {
+            setSendError(null);
+            await sendMessage({
+                conversationId: conversationId as Id<"conversations">,
+                content: text,
+            });
+            clearTyping({ conversationId: conversationId as Id<"conversations"> });
+            setText("");
+            setIsAtBottom(true);
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            setHasNewMessages(false);
+        } catch (error) {
+            setSendError("Failed to send message. Try again.");
+        }
     };
 
-    const deleteMessage = useMutation(api.messages.deleteMessage);
+
 
     return (
         <div className="flex h-screen">
@@ -110,6 +116,11 @@ export default function ConversationPage() {
                         </p>
                     </div>
                 </div>
+                {messages === undefined && (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                )}
 
                 <div
                     ref={messagesContainerRef}
@@ -154,6 +165,12 @@ export default function ConversationPage() {
 
                 {typingUser && (
                     <p className="text-xs text-gray-400 px-4 pb-1">{typingUser} is typing...</p>
+                )}
+                {sendError && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 text-sm">
+                        <span>{sendError}</span>
+                        <button onClick={handleSend} className="underline font-medium">Retry</button>
+                    </div>
                 )}
 
                 <div className="p-4 border-t flex gap-2">

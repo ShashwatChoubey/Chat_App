@@ -30,6 +30,7 @@ export default function Home() {
     const createConversation = useMutation(api.conversations.createConversation);
     const sendMessage = useMutation(api.messages.sendMessage);
     const router = useRouter();
+
     useOnlineStatus()
 
     useEffect(() => {
@@ -52,21 +53,24 @@ export default function Home() {
         setSelectedUser(clickedUser);
         setText("");
     };
+    const [sendError, setSendError] = useState<string | null>(null);
 
     const handleSend = async () => {
         if (!text.trim() || !selectedUser) return;
-
-        const conversationId = await createConversation({
-            participantId: selectedUser._id,
-        });
-
-        await sendMessage({
-            conversationId: conversationId as Id<"conversations">,
-            content: text,
-        });
-
-        setText("");
-        router.push(`/chat/${conversationId}`);
+        try {
+            setSendError(null);
+            const conversationId = await createConversation({
+                participantId: selectedUser._id,
+            });
+            await sendMessage({
+                conversationId: conversationId as Id<"conversations">,
+                content: text,
+            });
+            setText("");
+            router.push(`/chat/${conversationId}`);
+        } catch (error) {
+            setSendError("Failed to send message. Try again.");
+        }
     };
 
     const filteredUsers = users?.filter((u) =>
@@ -74,6 +78,7 @@ export default function Home() {
     );
 
     if (!isLoaded) return <div>Loading...</div>;
+
 
     return (
         <div className="flex h-screen">
@@ -93,6 +98,12 @@ export default function Home() {
                         <div className="flex-1 flex items-center justify-center text-gray-400">
                             Send a message to begin the conversation
                         </div>
+                        {sendError && (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 text-sm">
+                                <span>{sendError}</span>
+                                <button onClick={handleSend} className="underline font-medium">Retry</button>
+                            </div>
+                        )}
 
                         <div className="p-4 border-t flex gap-2">
                             <input
