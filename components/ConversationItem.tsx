@@ -20,7 +20,11 @@ type Props = {
             content: string;
             _creationTime: number;
             senderId: Id<"users">;
-        } | null
+        } | null;
+        lastReaction?: {
+            preview: string;
+            _creationTime: number;
+        } | null;
     };
 };
 
@@ -57,9 +61,11 @@ export default function ConversationItem({ conv }: Props) {
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500 truncate">
-                        {conv.lastMessage
-                            ? `${conv.lastMessage.senderId === conv.otherUser?._id ? conv.otherUser?.name : "You"}: ${conv.lastMessage.content}`
-                            : "No messages yet"}
+                        {conv.lastReaction
+                            ? conv.lastReaction.preview
+                            : conv.lastMessage
+                                ? `${conv.lastMessage.senderId === conv.otherUser?._id ? conv.otherUser?.name : "You"}: ${conv.lastMessage.content}`
+                                : "No messages yet"}
                     </span>
                     {unreadCount ? (
                         <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">

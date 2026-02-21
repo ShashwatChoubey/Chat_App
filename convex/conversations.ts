@@ -70,7 +70,6 @@ export const getConversations = query({
                 );
                 const otherUser = await ctx.db.get(otherUserId!);
 
-                // Get last message
                 const messages = await ctx.db
                     .query("messages")
                     .withIndex("by_conversationId", (q) =>
@@ -80,6 +79,37 @@ export const getConversations = query({
 
                 const lastMessage = messages[messages.length - 1] ?? null;
 
+
+                let lastReaction = null;
+                for (const message of messages) {
+                    const reactions = await ctx.db
+                        .query("reactions")
+                        .withIndex("by_messageId", (q) => q.eq("messageId", message._id))
+                        .collect();
+
+                    for (const reaction of reactions) {
+                        if (!lastReaction || reaction._creationTime > lastReaction._creationTime) {
+                            const reactor = await ctx.db.get(reaction.userId);
+                            const messageOwner = await ctx.db.get(message.senderId);
+                            const reactorName = reaction.userId === currentUser._id ? "You" : reactor?.name ?? "Someone";
+                            const ownerName = message.senderId === currentUser._id ? "your" : `${messageOwner?.name}'s`;
+
+                            lastReaction = {
+                                _creationTime: reaction._creationTime,
+                                preview: `${reactorName} reacted ${reaction.emoji} to ${ownerName} message`,
+                            };
+                        }
+                    }
+                }
+
+                // Compare lastMessage and lastReaction timestamps
+                let preview = null;
+                if (lastMessage && lastReaction) {
+                    preview = lastReaction._creationTime > lastMessage._creationTime ? lastReaction : null;
+                } else if (lastReaction) {
+                    preview = lastReaction;
+                }
+
                 return {
                     ...conv,
                     otherUser,
@@ -88,6 +118,7 @@ export const getConversations = query({
                         _creationTime: lastMessage._creationTime,
                         senderId: lastMessage.senderId,
                     } : null,
+                    lastReaction: preview,
                 };
             })
         );
@@ -95,6 +126,10 @@ export const getConversations = query({
         return conversationsWithDetails;
     },
 });
+
+
+
+
 
 export const getConversationById = query({
     args: { conversationId: v.id("conversations") },
