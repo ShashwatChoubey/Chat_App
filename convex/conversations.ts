@@ -65,6 +65,65 @@ export const getConversations = query({
 
         const conversationsWithDetails = await Promise.all(
             userConversations.map(async (conv) => {
+                if (conv.isGroup) {
+                    const messages = await ctx.db
+                        .query("messages")
+                        .withIndex("by_conversationId", (q) =>
+                            q.eq("conversationId", conv._id)
+                        )
+                        .collect();
+
+                    const lastMessage = messages[messages.length - 1] ?? null;
+                    const lastMessageSender = lastMessage ? await ctx.db.get(lastMessage.senderId) : null;
+
+                    let lastReaction = null;
+                    for (const message of messages) {
+                        const reactions = await ctx.db
+                            .query("reactions")
+                            .withIndex("by_messageId", (q) => q.eq("messageId", message._id))
+                            .collect();
+
+                        for (const reaction of reactions) {
+                            if (!lastReaction || reaction._creationTime > lastReaction._creationTime) {
+                                const reactor = await ctx.db.get(reaction.userId);
+                                const messageOwner = await ctx.db.get(message.senderId);
+                                const reactorName = reaction.userId === currentUser._id ? "You" : reactor?.name ?? "Someone";
+                                const ownerName = message.senderId === currentUser._id ? "your" : `${messageOwner?.name}'s`;
+
+                                lastReaction = {
+                                    _creationTime: reaction._creationTime,
+                                    preview: `${reactorName} reacted ${reaction.emoji} to ${ownerName} message`,
+                                };
+                            }
+                        }
+                    }
+
+                    let preview = null;
+                    if (lastMessage && lastReaction) {
+                        preview = lastReaction._creationTime > lastMessage._creationTime ? lastReaction : null;
+                    } else if (lastReaction) {
+                        preview = lastReaction;
+                    }
+
+                    return {
+                        ...conv,
+                        otherUser: null,
+                        lastMessage: lastMessage ? {
+                            content: lastMessage.content,
+                            _creationTime: lastMessage._creationTime,
+                            senderId: lastMessage.senderId,
+                            senderName: lastMessageSender?.name ?? "Unknown",
+                        } : null,
+                        lastReaction: preview,
+                        memberCount: conv.participants.length,
+                    };
+                }
+
+
+
+
+
+
                 const otherUserId = conv.participants.find(
                     (id) => id !== currentUser._id
                 );
@@ -78,7 +137,6 @@ export const getConversations = query({
                     .collect();
 
                 const lastMessage = messages[messages.length - 1] ?? null;
-
 
                 let lastReaction = null;
                 for (const message of messages) {
@@ -102,7 +160,6 @@ export const getConversations = query({
                     }
                 }
 
-                // Compare lastMessage and lastReaction timestamps
                 let preview = null;
                 if (lastMessage && lastReaction) {
                     preview = lastReaction._creationTime > lastMessage._creationTime ? lastReaction : null;
@@ -119,15 +176,19 @@ export const getConversations = query({
                         senderId: lastMessage.senderId,
                     } : null,
                     lastReaction: preview,
+                    memberCount: null,
                 };
             })
         );
 
+
+
+
+
+
         return conversationsWithDetails;
     },
 });
-
-
 
 
 
@@ -147,11 +208,51 @@ export const getConversationById = query({
         const conversation = await ctx.db.get(args.conversationId);
         if (!conversation) return null;
 
+        if (conversation.isGroup) {
+            const members = await Promise.all(
+                conversation.participants.map((id) => ctx.db.get(id))
+            );
+            const memberNames = members.map((m) => m?.name ?? "Unknown").join(", ");
+
+            return {
+                ...conversation,
+                otherUser: null,
+                memberCount: conversation.participants.length,
+                memberNames,
+            };
+        }
+
         const otherUserId = conversation.participants.find(
             (id) => id !== currentUser._id
         );
         const otherUser = await ctx.db.get(otherUserId!);
 
-        return { ...conversation, otherUser };
+        return { ...conversation, otherUser, memberCount: null, memberNames: null };
+    },
+});
+
+export const createGroupConversation = mutation({
+    args: {
+        participantIds: v.array(v.id("users")),
+        groupName: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) throw new Error("Unauthorized");
+
+        const currentUser = await ctx.db
+            .query("users")
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+            .unique();
+
+        if (!currentUser) throw new Error("User not found");
+
+        const conversationId = await ctx.db.insert("conversations", {
+            participants: [currentUser._id, ...args.participantIds],
+            isGroup: true,
+            groupName: args.groupName,
+        });
+
+        return conversationId;
     },
 });

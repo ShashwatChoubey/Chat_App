@@ -40,7 +40,17 @@ export const getMessages = query({
             )
             .collect();
 
-        return messages;
+        const messagesWithSender = await Promise.all(
+            messages.map(async (message) => {
+                const sender = await ctx.db.get(message.senderId);
+                return {
+                    ...message,
+                    senderName: sender?.name ?? "Unknown",
+                };
+            })
+        );
+
+        return messagesWithSender;
     },
 });
 

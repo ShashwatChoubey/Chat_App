@@ -9,6 +9,9 @@ import { useRouter } from "next/navigation";
 type Props = {
     conv: {
         _id: Id<"conversations">;
+        isGroup?: boolean;
+        groupName?: string;
+        memberCount?: number | null;
         otherUser?: {
             _id: Id<"users">;
             name: string;
@@ -20,6 +23,7 @@ type Props = {
             content: string;
             _creationTime: number;
             senderId: Id<"users">;
+            senderName?: string;
         } | null;
         lastReaction?: {
             preview: string;
@@ -27,6 +31,7 @@ type Props = {
         } | null;
     };
 };
+
 
 export default function ConversationItem({ conv }: Props) {
     const router = useRouter();
@@ -40,32 +45,33 @@ export default function ConversationItem({ conv }: Props) {
             className="flex items-center gap-3 p-3 border-b cursor-pointer hover:bg-gray-50"
         >
             <div className="relative flex-shrink-0">
-                <img
-                    src={conv.otherUser?.imageUrl}
-                    alt={conv.otherUser?.name}
-                    className="w-10 h-10 rounded-full"
-                />
-                {conv.otherUser?.isOnline && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                )}
+                {conv.isGroup
+                    ? `${conv.lastMessage?.senderName ?? ""}${conv.lastMessage?.senderName ? ": " : ""}${conv.lastMessage?.content ?? "No messages yet"}`
+                    : conv.lastReaction
+                        ? conv.lastReaction.preview
+                        : conv.lastMessage
+                            ? `${conv.lastMessage.senderId === conv.otherUser?._id ? conv.otherUser?.name : "You"}: ${conv.lastMessage.content}`
+                            : "No messages yet"}
             </div>
 
             <div className="flex flex-col flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                    <span className="font-medium">{conv.otherUser?.name}</span>
-                    {conv.lastMessage && (
-                        <span className="text-xs text-gray-400">
-                            {formatMessageTime(conv.lastMessage._creationTime)}
-                        </span>
-                    )}
+                    <span className="font-medium">
+                        {conv.isGroup ? conv.groupName : conv.otherUser?.name}
+                    </span>
+
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500 truncate">
-                        {conv.lastReaction
-                            ? conv.lastReaction.preview
-                            : conv.lastMessage
-                                ? `${conv.lastMessage.senderId === conv.otherUser?._id ? conv.otherUser?.name : "You"}: ${conv.lastMessage.content}`
-                                : "No messages yet"}
+                        {conv.isGroup
+                            ? conv.lastReaction
+                                ? conv.lastReaction.preview
+                                : `${conv.lastMessage?.senderName ?? ""}${conv.lastMessage?.senderName ? ": " : ""}${conv.lastMessage?.content ?? "No messages yet"}`
+                            : conv.lastReaction
+                                ? conv.lastReaction.preview
+                                : conv.lastMessage
+                                    ? `${conv.lastMessage.senderId === conv.otherUser?._id ? conv.otherUser?.name : "You"}: ${conv.lastMessage.content}`
+                                    : "No messages yet"}
                     </span>
                     {unreadCount ? (
                         <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -75,5 +81,6 @@ export default function ConversationItem({ conv }: Props) {
                 </div>
             </div>
         </div>
+
     );
 }

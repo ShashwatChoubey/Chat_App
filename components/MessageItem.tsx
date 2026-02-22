@@ -12,14 +12,16 @@ type Props = {
         _id: Id<"messages">;
         content: string;
         senderId: Id<"users">;
+        senderName?: string;
         _creationTime: number;
         isDeleteMessage?: boolean;
     };
     isMe: boolean;
     currentUserId: Id<"users">;
+    isGroup?: boolean;
 };
 
-export default function MessageItem({ message, isMe, currentUserId }: Props) {
+export default function MessageItem({ message, isMe, currentUserId, isGroup }: Props) {
     const reactions = useQuery(api.reactions.getReactions, {
         messageId: message._id,
     });
@@ -36,6 +38,9 @@ export default function MessageItem({ message, isMe, currentUserId }: Props) {
                     <p className="italic text-gray-400 text-sm">This message was deleted</p>
                 ) : (
                     <>
+                        {!isMe && isGroup && (
+                            <p className="text-xs font-medium text-blue-500 mb-1">{message.senderName}</p>
+                        )}
                         <p>{message.content}</p>
                         {isMe && !message.isDeleteMessage && Date.now() - message._creationTime < 5 * 60 * 1000 && (
                             <button
@@ -47,27 +52,26 @@ export default function MessageItem({ message, isMe, currentUserId }: Props) {
                         )}
                     </>
                 )}
-                <p className="text-xs text-gray-400 mt-1">{formatMessageTime(message._creationTime)}</p>
-            </div>
 
-            {!message.isDeleteMessage && (
-                <div className="flex gap-1 mt-1">
-                    {EMOJIS.map((emoji) => {
-                        const reaction = reactions?.find((r) => r.emoji === emoji);
-                        const hasReacted = reaction?.users.includes(currentUserId);
-                        return (
-                            <button
-                                key={emoji}
-                                onClick={() => toggleReaction({ messageId: message._id, emoji })}
-                                className={`text-xs px-1 rounded ${hasReacted ? "bg-blue-100" : "hover:bg-gray-100"
-                                    }`}
-                            >
-                                {emoji} {reaction?.count ? reaction.count : ""}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+                {!message.isDeleteMessage && (
+                    <div className="flex gap-1 mt-1">
+                        {EMOJIS.map((emoji) => {
+                            const reaction = reactions?.find((r) => r.emoji === emoji);
+                            const hasReacted = reaction?.users.includes(currentUserId);
+                            return (
+                                <button
+                                    key={emoji}
+                                    onClick={() => toggleReaction({ messageId: message._id, emoji })}
+                                    className={`text-xs px-1 rounded ${hasReacted ? "bg-blue-100" : "hover:bg-gray-100"
+                                        }`}
+                                >
+                                    {emoji} {reaction?.count ? reaction.count : ""}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
