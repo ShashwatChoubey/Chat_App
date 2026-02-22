@@ -34,11 +34,7 @@ export default function Home() {
 
 
     useOnlineStatus();
-    useEffect(() => {
-        if (selectedUser) {
-            document.querySelector<HTMLInputElement>('input[placeholder="Type a message..."]')?.focus();
-        }
-    }, [selectedUser]);
+
 
     useEffect(() => {
         if (isLoaded && user) {
@@ -139,6 +135,7 @@ export default function Home() {
                     </svg>
                     <input
                         type="text"
+                        autoFocus
                         placeholder="Search people..."
                         value={userSearch}
                         onChange={(e) => setUserSearch(e.target.value)}
