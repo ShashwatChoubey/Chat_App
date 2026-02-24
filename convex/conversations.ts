@@ -118,6 +118,7 @@ export const getConversations = query({
                         memberCount: conv.participants.length,
                     };
                 }
+                
 
 
 
@@ -180,6 +181,13 @@ export const getConversations = query({
                 };
             })
         );
+
+         conversationsWithDetails.sort((a, b) => {
+            const aTime = a.lastMessage?._creationTime ?? 0;
+            const bTime = b.lastMessage?._creationTime ?? 0;
+            return bTime - aTime;
+        });
+        
 
 
 
